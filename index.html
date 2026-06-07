@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faculty Applications — by Major</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#f3eee2; --paper-2:#efe8d8; --card:#fbf8f0; --card-edge:#e2d9c4;
+    --ink:#26221b; --ink-soft:#5d564a; --ink-faint:#8a8170;
+    --rule:#ddd3bf; --rule-soft:#e8e0cf;
+    --accent:#9b3a2d; --accent-deep:#7e2c21; --accent-tint:#f0e0da;
+    --gold:#9a7b34; --gold-tint:#efe6cd;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 6px 22px -12px rgba(60,45,30,.35);
+    --shadow-hi:0 2px 0 rgba(0,0,0,.02),0 16px 38px -16px rgba(60,45,30,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Hanken Grotesk",sans-serif;
+    color:var(--ink); background:var(--paper);
+    background-image:
+      radial-gradient(120% 80% at 12% -10%, #f7f2e6 0%, rgba(247,242,230,0) 55%),
+      radial-gradient(110% 70% at 100% 0%, #ece3d0 0%, rgba(236,227,208,0) 50%);
+    background-attachment:fixed;
+    line-height:1.45; -webkit-font-smoothing:antialiased;
+    padding:0 22px 90px;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  a{color:var(--accent-deep)}
+
+  /* ---------- Masthead ---------- */
+  header.mast{padding:42px 0 22px;border-bottom:2px solid var(--ink);margin-bottom:0;position:relative}
+  .kicker{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 8px}
+  h1{font-family:"Fraunces",serif;font-weight:900;font-size:clamp(34px,5.4vw,58px);line-height:.98;margin:0;letter-spacing:-.01em}
+  h1 em{font-style:italic;font-weight:500;color:var(--accent)}
+  .lede{margin:14px 0 0;max-width:60ch;color:var(--ink-soft);font-size:15.5px}
+  .mast-meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;font-size:13px;color:var(--ink-faint)}
+  .mast-meta b{font-weight:700;color:var(--ink)}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:3px;vertical-align:middle}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+    padding:16px 0 18px;border-bottom:1px solid var(--rule)}
+  .search{position:relative;flex:1;min-width:240px;max-width:420px}
+  .search input{width:100%;font:inherit;font-size:14.5px;color:var(--ink);
+    background:var(--card);border:1px solid var(--card-edge);border-radius:9px;
+    padding:11px 14px 11px 38px;outline:none;transition:border-color .15s,box-shadow .15s}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.5}
+  .tools-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  select.sort{font:inherit;font-size:13.5px;color:var(--ink);background:var(--card);
+    border:1px solid var(--card-edge);border-radius:9px;padding:10px 12px;outline:none;cursor:pointer}
+  select.sort:focus{border-color:var(--accent)}
+  .btn{font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border-radius:9px;
+    padding:10px 15px;border:1px solid transparent;transition:transform .12s,box-shadow .12s,background .15s,color .15s;
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .btn:active{transform:translateY(1px)}
+  .btn-ghost{background:var(--card);border-color:var(--card-edge);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .btn-solid{background:var(--accent);color:#fdf6ee;box-shadow:0 6px 16px -8px rgba(155,58,45,.7)}
+  .btn-solid:hover{background:var(--accent-deep)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+
+  /* ---------- Major labels ---------- */
+  .labels-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin:24px 0 12px;flex-wrap:wrap}
+  .labels-head h2{font-family:"Fraunces",serif;font-weight:600;font-size:19px;margin:0;letter-spacing:-.01em}
+  .labels-head .hint{font-size:12.5px;color:var(--ink-faint)}
+  .pills{display:flex;flex-wrap:wrap;gap:9px}
+  .pill{font:inherit;cursor:pointer;border:1px solid var(--card-edge);background:var(--card);
+    color:var(--ink);border-radius:999px;padding:9px 14px;font-size:13.5px;font-weight:500;
+    display:inline-flex;align-items:center;gap:9px;line-height:1;
+    transition:transform .12s,border-color .15s,background .15s,color .15s,box-shadow .15s}
+  .pill:hover{transform:translateY(-1px);border-color:var(--accent);box-shadow:var(--shadow)}
+  .pill .ct{font-weight:700;font-size:12px;color:var(--ink-faint);
+    background:var(--paper-2);border-radius:999px;padding:2px 8px;min-width:24px;text-align:center;transition:.15s}
+  .pill.active{background:var(--accent);border-color:var(--accent);color:#fdf6ee;box-shadow:0 8px 20px -10px rgba(155,58,45,.75)}
+  .pill.active .ct{background:rgba(253,246,238,.22);color:#fdf6ee}
+  .pill.zero{opacity:.5}
+  .pill.all{font-weight:700}
+  .pill.extra{border-style:dashed;border-color:var(--gold)}
+  .pill.extra .ct{background:var(--gold-tint);color:var(--gold)}
+  .pill.extra::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+  .pill.extra.active{background:var(--gold);border-color:var(--gold)}
+  .pill.extra.active::before{background:#fff}
+
+  /* ---------- Context bar ---------- */
+  .context{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    margin:26px 0 6px;padding:16px 18px;background:var(--card);border:1px solid var(--card-edge);
+    border-left:4px solid var(--accent);border-radius:12px;box-shadow:var(--shadow)}
+  .context .ttl{font-family:"Fraunces",serif;font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .context .sub{font-size:13px;color:var(--ink-soft);margin-top:2px}
+  .context-actions{display:flex;gap:9px;flex-wrap:wrap}
+
+  /* ---------- Results ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:18px}
+  .card{background:var(--card);border:1px solid var(--card-edge);border-radius:14px;padding:18px 18px 16px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;
+    animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+  .card:hover{box-shadow:var(--shadow-hi)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .card .name{font-family:"Fraunces",serif;font-weight:600;font-size:19px;line-height:1.12;margin:0 0 3px;letter-spacing:-.01em}
+  .card .mail{font-size:13px;word-break:break-all}
+  .card .mail a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule)}
+  .card .mail a:hover{color:var(--accent-deep);border-color:var(--accent)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 14px}
+  .chip{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px;
+    background:var(--paper-2);color:var(--ink-soft);border:1px solid var(--rule-soft);line-height:1}
+  .chip.on{background:var(--accent-tint);color:var(--accent-deep);border-color:#e3c4bb}
+  .chip.xtra{background:var(--gold-tint);color:var(--gold);border-color:#e6d6a8}
+  .facts{border-top:1px dashed var(--rule);padding-top:12px;display:grid;gap:8px}
+  .fact{display:grid;grid-template-columns:104px 1fr;gap:10px;font-size:13px;align-items:start}
+  .fact .k{color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10.5px;padding-top:2px}
+  .fact .v{color:var(--ink)}
+  .metrics{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .metric{font-size:11.5px;background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:6px;padding:3px 8px;color:var(--ink-soft)}
+  .metric b{color:var(--ink);font-weight:700}
+  details.courses{margin-top:2px}
+  details.courses summary{cursor:pointer;color:var(--accent-deep);font-size:12.5px;font-weight:600;list-style:none}
+  details.courses summary::-webkit-details-marker{display:none}
+  details.courses summary::before{content:"▸ ";font-size:10px}
+  details.courses[open] summary::before{content:"▾ "}
+  .courses .body{white-space:pre-line;font-size:12.5px;color:var(--ink-soft);margin-top:6px;
+    border-left:2px solid var(--rule);padding-left:10px}
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--rule-soft)}
+  .lnk{font-size:12px;font-weight:600;text-decoration:none;color:var(--accent-deep);
+    border:1px solid var(--card-edge);border-radius:7px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;
+    background:#fffaf2;transition:.15s}
+  .lnk:hover{border-color:var(--accent);background:var(--accent-tint)}
+  .lnk.none{color:var(--ink-faint);border-style:dashed;pointer-events:none;background:transparent}
+
+  /* ---------- Empty / prompt ---------- */
+  .prompt{margin-top:30px;text-align:center;padding:54px 24px;border:1px dashed var(--rule);border-radius:16px;background:rgba(251,248,240,.5)}
+  .prompt .big{font-family:"Fraunces",serif;font-size:26px;font-weight:500;margin:0 0 8px;color:var(--ink)}
+  .prompt .big em{font-style:italic;color:var(--accent)}
+  .prompt p{color:var(--ink-soft);margin:0 auto;max-width:46ch;font-size:14.5px}
+  .nomatch{margin-top:18px;padding:30px;text-align:center;color:var(--ink-soft);border:1px dashed var(--rule);border-radius:14px}
+
+  /* ---------- Toast ---------- */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#f3eee2;font-size:13.5px;font-weight:500;padding:12px 18px;border-radius:10px;
+    box-shadow:0 14px 34px -12px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.28s;z-index:50;max-width:90vw}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer.note{margin-top:46px;padding-top:18px;border-top:1px solid var(--rule);
+    font-size:12.5px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+  footer.note b{color:var(--ink-soft)}
+
+  .print-head{display:none}
+
+  @media (max-width:560px){
+    body{padding:0 14px 70px}
+    .fact{grid-template-columns:1fr;gap:2px}
+    .fact .k{padding-top:0}
+  }
+
+  /* ---------- Print ---------- */
+  @media print{
+    body{background:#fff;padding:0;color:#000}
+    .toolbar,.labels-head,.pills,.context-actions,#toast,footer.note,header.mast .lede,header.mast .mast-meta{display:none !important}
+    header.mast{border:none;padding:0 0 6px}
+    .print-head{display:block;margin:0 0 10px}
+    .print-head .pt{font-family:"Fraunces",serif;font-size:22px;font-weight:600}
+    .print-head .ps{font-size:12px;color:#444}
+    .context{box-shadow:none;border:none;border-left:3px solid #000;border-radius:0;padding:6px 12px;margin:6px 0}
+    .grid{display:block}
+    .card{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border:1px solid #bbb;margin:0 0 10px;animation:none}
+    details.courses[open] .body,details.courses .body{display:block}
+    details.courses summary{display:none}
+    .lnk{border:none;padding:0;background:none;font-weight:500}
+    a{color:#000}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="kicker">Faculty Recruitment · Applicant Ledger</p>
+    <h1>Applications, <em>by Major</em></h1>
+    <p class="lede">Click a major below to see everyone who applied to it. Applicants who chose more than one major appear under each — every card lists all the majors that person selected.</p>
+    <div class="mast-meta">
+      <span><span class="dot"></span><b id="totalCt">0</b> applicants on file</span>
+      <span id="dataSrc">Loaded from your form export · <b id="genDate"></b></span>
+      <span id="liveStatus"></span>
+    </div>
+    <div class="print-head">
+      <div class="pt" id="printTitle"></div>
+      <div class="ps" id="printSub"></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchBox" type="text" placeholder="Find a name, email or institution on screen…">
+    </div>
+    <div class="tools-right">
+      <select class="sort" id="sortSel" title="Sort applicants">
+        <option value="name">Sort: Name (A–Z)</option>
+        <option value="recent">Sort: Most recent</option>
+        <option value="research">Sort: Research years</option>
+        <option value="teach">Sort: Teaching years</option>
+        <option value="q1">Sort: Q1 papers</option>
+      </select>
+      <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
+      <button class="btn btn-solid" id="syncBtn" title="Pull the latest data straight from your Google Sheet">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Refresh from Sheet
+      </button>
+      <button class="btn btn-ghost" id="loadBtn" title="Re-export the latest responses from your form, then load it here">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
+        Load latest export
+      </button>
+      <button class="btn btn-ghost" id="saveBtn" title="Save a fresh copy of this whole tool with the currently loaded applicants baked in — open that copy from then on">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+        Save updated tool
+      </button>
+    </div>
+  </div>
+
+  <div class="labels-head">
+    <h2>Majors</h2>
+    <span class="hint">numbers = applicants who chose that major</span>
+  </div>
+  <div class="pills" id="pills"></div>
+
+  <div id="contextBar"></div>
+  <div id="results"></div>
+
+  <footer class="note">
+    <span><b>To send a coordinator their list:</b> select that major, then “Download as Excel” — the file contains only that major’s applicants, all fields included.</span>
+    <span><b>When the list grows:</b> if a Google Sheet link is set, just click “Refresh from Sheet”. Otherwise export the latest responses (File ▸ Download ▸ .xlsx), click “Load latest export”, then “Save updated tool” to keep a copy that opens already up to date.</span>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG — the 12 majors, in your order. To add/rename a major
+   later, just edit this list. Any major found in the data that
+   is NOT in this list still appears (marked with a gold dot),
+   so nothing is ever silently dropped.
+   ============================================================ */
+const CANONICAL_MAJORS = [
+  "Business Administration","Computer Science","Cognitive Science","Economics",
+  "Environment and Sustainability","History","Literary and Cultural Studies",
+  "Philosophy","Political Science","Psychology","Sociology","Fine Arts"
+];
+
+/* =========================================================================
+   LIVE GOOGLE SHEET (optional) - makes the tool update itself automatically.
+   Paste your sheet's PUBLISHED CSV link between the quotes below. To get it:
+   open the Sheet, then File > Share > Publish to web > pick the
+   "Form Responses 1" tab > Comma-separated values (.csv) > Publish, and
+   copy the link it gives you.
+   Leave it empty ("") to keep using the built-in copy + "Load latest export".
+   ========================================================================= */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgN0givAzmD9rougl3ajP5E4yo67un8nW38j4a0H2FvQPCm_eeyhzQCvJn5w_wG3sRHFftrRno-M9o/pub?gid=1047123126&single=true&output=csv";
+
+/* ---- embedded data (your current export) ---- */
+/*DATA_START*/const DATA = {"headers": [], "rows": [], "generated": "07 Jun 2026", "n": 0};/*DATA_END*/
+
+/* ---- state ---- */
+let HEADERS = DATA.headers.slice();
+let ROWS = DATA.rows.slice();
+let FIELDS = {}, RECORDS = [];
+let selectedMajor = null;     // null = nothing chosen yet; "__ALL__" = everyone
+let searchTerm = "";
+let sortKey = "name";
+
+/* ---- helpers ---- */
+const $ = id => document.getElementById(id);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const isUrl = s => /^https?:\/\//i.test((s||"").trim());
+const numOf = s => { const n = parseFloat(String(s).replace(/[^0-9.\-]/g,"")); return isNaN(n)?0:n; };
+
+function detectFields(headers){
+  const low = headers.map(h => h.toLowerCase());
+  const find = pred => { const i = low.findIndex(pred); return i>=0 ? headers[i] : null; };
+  return {
+    name:  find(h=>h.includes("full name")) || find(h=>h.includes("name") && !h.includes("institut")),
+    email: (low.indexOf("email address")>=0 ? headers[low.indexOf("email address")]
+             : find(h=>h.includes("email") && !h.includes("reference"))),
+    majors: find(h=>h.includes("major")),
+    phd:   find(h=>h.includes("phd")),
+    pg:    find(h=>h.includes("postgraduate")),
+    researchInst: find(h=>h.includes("research experience") && h.includes("institut")),
+    researchYrs:  find(h=>h.includes("research experience") && h.includes("year")),
+    teachInst:    find(h=>h.includes("teaching experience") && h.includes("institut")),
+    teachYrs:     find(h=>h.includes("teaching experience") && h.includes("year")),
+    courses: find(h=>h.includes("courses taught")),
+    q1: find(h=>h.includes("papers in q1")),
+    q2: find(h=>h.includes("papers in q2")),
+    q3: find(h=>h.includes("papers in q3")),
+    q4: find(h=>h.includes("papers in q4")),
+    sci: find(h=>h.includes("sci indexed") && !h.includes("not")),
+    nonSci: find(h=>h.includes("not sci")),
+    confHi: find(h=>h.includes("higher than 10")),
+    confLo: find(h=>h.includes("less than 10")),
+    resume: find(h=>h.includes("resume")),
+    pub1: find(h=>h.includes("publication 1")),
+    pub2: find(h=>h.includes("publication 2")),
+    ts: find(h=>h.includes("timestamp")),
+  };
+}
+
+function splitMajors(cell){ return (cell||"").split(",").map(s=>s.trim()).filter(Boolean); }
+
+function buildView(row){
+  const g = k => FIELDS[k] ? (row[FIELDS[k]]||"") : "";
+  return {
+    row,
+    majors: splitMajors(g("majors")),
+    name: g("name") || "(name not provided)",
+    email: g("email"),
+    phd: g("phd"), pg: g("pg"),
+    researchInst: g("researchInst"), researchYrs: g("researchYrs"),
+    teachInst: g("teachInst"), teachYrs: g("teachYrs"),
+    courses: g("courses"),
+    q1:g("q1"), q2:g("q2"), q3:g("q3"), q4:g("q4"), sci:g("sci"), nonSci:g("nonSci"),
+    confHi:g("confHi"), confLo:g("confLo"),
+    resume:g("resume"), pub1:g("pub1"), pub2:g("pub2"), ts:g("ts")
+  };
+}
+
+function rebuild(){
+  FIELDS = detectFields(HEADERS);
+  RECORDS = ROWS.map(buildView);
+  $("totalCt").textContent = RECORDS.length;
+  renderPills();
+  renderAll();
+}
+
+/* ---- majors with counts, canonical first then extras ---- */
+function majorList(){
+  const counts = {};
+  RECORDS.forEach(r => r.majors.forEach(m => counts[m] = (counts[m]||0)+1));
+  const extras = Object.keys(counts).filter(m => !CANONICAL_MAJORS.includes(m)).sort();
+  return CANONICAL_MAJORS.map(m=>({name:m,count:counts[m]||0,extra:false}))
+    .concat(extras.map(m=>({name:m,count:counts[m]||0,extra:true})));
+}
+
+function renderPills(){
+  const box = $("pills");
+  box.innerHTML = "";
+  const all = document.createElement("button");
+  all.className = "pill all" + (selectedMajor==="__ALL__"?" active":"");
+  all.innerHTML = 'All applicants <span class="ct">'+RECORDS.length+'</span>';
+  all.onclick = ()=>select("__ALL__");
+  box.appendChild(all);
+
+  majorList().forEach(m=>{
+    const b = document.createElement("button");
+    b.className = "pill" + (m.extra?" extra":"") + (m.count===0?" zero":"") + (selectedMajor===m.name?" active":"");
+    if(m.extra) b.title = "Not in your standard list of 12 majors";
+    b.innerHTML = esc(m.name) + ' <span class="ct">'+m.count+'</span>';
+    b.onclick = ()=>select(m.name);
+    box.appendChild(b);
+  });
+}
+
+function select(m){
+  selectedMajor = (selectedMajor===m) ? null : m;   // click again to clear
+  renderPills();
+  renderAll();
+  if(selectedMajor){
+    document.getElementById("contextBar").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
+}
+
+/* ---- which records to show (search only narrows what's on screen) ---- */
+function recordsForMajor(){
+  if(selectedMajor===null) return [];
+  if(selectedMajor==="__ALL__") return RECORDS.slice();
+  return RECORDS.filter(r => r.majors.includes(selectedMajor));
+}
+function visibleRecords(){
+  let recs = recordsForMajor();
+  if(searchTerm){
+    const t = searchTerm.toLowerCase();
+    recs = recs.filter(r => (r.name+" "+r.email+" "+r.phd+" "+r.pg+" "+r.researchInst+" "+r.teachInst+" "+r.courses).toLowerCase().includes(t));
+  }
+  const cmp = {
+    name: (a,b)=>a.name.localeCompare(b.name),
+    recent: (a,b)=>String(b.ts).localeCompare(String(a.ts)),
+    research: (a,b)=>numOf(b.researchYrs)-numOf(a.researchYrs),
+    teach: (a,b)=>numOf(b.teachYrs)-numOf(a.teachYrs),
+    q1: (a,b)=>numOf(b.q1)-numOf(a.q1),
+  }[sortKey] || ((a,b)=>0);
+  return recs.slice().sort(cmp);
+}
+
+/* ---- rendering ---- */
+function renderAll(){ renderContext(); renderResults(); }
+
+function renderContext(){
+  const bar = $("contextBar");
+  if(selectedMajor===null){ bar.innerHTML = ""; return; }
+  const total = recordsForMajor().length;
+  const label = selectedMajor==="__ALL__" ? "All applicants" : selectedMajor;
+  bar.className = "context";
+  bar.innerHTML =
+    '<div><p class="ttl">'+esc(label)+'</p>'+
+    '<div class="sub"><b>'+total+'</b> applicant'+(total===1?"":"s")+
+      (selectedMajor==="__ALL__"?"":" chose this major")+'</div></div>'+
+    '<div class="context-actions">'+
+      '<button class="btn btn-ghost" onclick="copyEmails()" title="Copy all email addresses for this major">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> Copy emails</button>'+
+      '<button class="btn btn-ghost" onclick="window.print()" title="Print or save this list as PDF">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="8"/><path d="M6 17H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/></svg> Print</button>'+
+      '<button class="btn btn-solid" onclick="exportExcel()" title="Download an Excel file with only this major\u2019s applicants">'+
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg> Download as Excel</button>'+
+    '</div>';
+}
+
+function metricsHTML(r){
+  const parts = [];
+  const q = [["Q1",r.q1],["Q2",r.q2],["Q3",r.q3],["Q4",r.q4]].filter(x=>numOf(x[1])>0);
+  if(q.length) parts.push(q.map(x=>'<span class="metric">'+x[0]+' <b>'+esc(x[1])+'</b></span>').join(""));
+  if(numOf(r.sci)>0) parts.push('<span class="metric">SCI <b>'+esc(r.sci)+'</b></span>');
+  const conf = numOf(r.confHi)+numOf(r.confLo);
+  if(conf>0) parts.push('<span class="metric">Conf. <b>'+conf+'</b></span>');
+  return parts.length ? '<div class="metrics">'+parts.join("")+'</div>' : '<span class="v" style="color:var(--ink-faint)">—</span>';
+}
+
+function linkHTML(label,url){
+  if(isUrl(url)) return '<a class="lnk" href="'+esc(url.trim())+'" target="_blank" rel="noopener">'+
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>'+label+'</a>';
+  return '<span class="lnk none">'+label+' — n/a</span>';
+}
+
+function cardHTML(r,i){
+  const chips = r.majors.map(m=>{
+    const cls = (selectedMajor!=="__ALL__" && selectedMajor!==null && m===selectedMajor) ? "chip on"
+              : (!CANONICAL_MAJORS.includes(m) ? "chip xtra" : "chip");
+    return '<span class="'+cls+'">'+esc(m)+'</span>';
+  }).join("");
+
+  let courses = "";
+  if(r.courses.trim()){
+    const long = r.courses.length > 150;
+    courses = long
+      ? '<details class="courses"><summary>Courses taught</summary><div class="body">'+esc(r.courses)+'</div></details>'
+      : '<div class="courses"><div class="body" style="border:none;padding:0;color:var(--ink)">'+esc(r.courses)+'</div></div>';
+  }
+
+  const facts = [];
+  if(r.phd.trim()) facts.push(['PhD',esc(r.phd)]);
+  if(r.pg.trim()) facts.push(['Postgrad',esc(r.pg)]);
+  const exp = [];
+  if(r.researchYrs.trim()) exp.push(esc(r.researchYrs)+' yr research');
+  if(r.teachYrs.trim()) exp.push(esc(r.teachYrs)+' yr teaching');
+  if(exp.length) facts.push(['Experience', exp.join(' · ')]);
+  facts.push(['Publications', metricsHTML(r)]);
+  if(courses) facts.push(['Teaching', courses]);
+
+  const factsHTML = facts.map(f=>'<div class="fact"><div class="k">'+f[0]+'</div><div class="v">'+f[1]+'</div></div>').join("");
+
+  return '<article class="card" style="animation-delay:'+Math.min(i*22,520)+'ms">'+
+    '<div class="name">'+esc(r.name)+'</div>'+
+    (r.email ? '<div class="mail"><a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a></div>' : '')+
+    '<div class="chips">'+chips+'</div>'+
+    '<div class="facts">'+factsHTML+'</div>'+
+    '<div class="links">'+linkHTML('Resume',r.resume)+linkHTML('Publication 1',r.pub1)+linkHTML('Publication 2',r.pub2)+'</div>'+
+  '</article>';
+}
+
+function renderResults(){
+  const box = $("results");
+  if(selectedMajor===null){
+    box.innerHTML =
+      '<div class="prompt"><p class="big">Pick a major to <em>begin</em></p>'+
+      '<p>Tap any label above. You’ll see every applicant who selected it — and for anyone who picked several majors, the same person turns up under each of their labels.</p></div>';
+    return;
+  }
+  const recs = visibleRecords();
+  if(recs.length===0){
+    box.innerHTML = '<div class="nomatch">No applicants'+(searchTerm?' match “'+esc(searchTerm)+'” here':' under this major yet')+'.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="grid">'+recs.map((r,i)=>cardHTML(r,i)).join("")+'</div>';
+}
+
+/* ---- actions ---- */
+function rowsForMajor(){
+  if(selectedMajor==="__ALL__") return ROWS.slice();
+  return ROWS.filter(row => splitMajors(row[FIELDS.majors]||"").includes(selectedMajor));
+}
+function exportExcel(){
+  if(selectedMajor===null) return;
+  const rows = rowsForMajor();
+  const aoa = [HEADERS].concat(rows.map(r => HEADERS.map(h => r[h] ?? "")));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = HEADERS.map(h => ({ wch: Math.min(Math.max(h.length, 12), 40) }));
+  const wb = XLSX.utils.book_new();
+  const safe = (selectedMajor==="__ALL__"?"All":selectedMajor).replace(/[^\w]+/g,"_");
+  XLSX.utils.book_append_sheet(wb, ws, safe.slice(0,31));
+  XLSX.writeFile(wb, safe+"_applicants.xlsx");
+  toast("Downloaded "+rows.length+" applicant"+(rows.length===1?"":"s")+" → "+safe+"_applicants.xlsx");
+}
+function copyEmails(){
+  if(selectedMajor===null) return;
+  const emails = [...new Set(rowsForMajor().map(r => (r[FIELDS.email]||"").trim()).filter(Boolean))];
+  const text = emails.join("; ");
+  const done = ()=>toast(emails.length+" email"+(emails.length===1?"":"s")+" copied to clipboard");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, ()=>fallbackCopy(text,done));
+  } else fallbackCopy(text,done);
+}
+function fallbackCopy(text,cb){
+  const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();try{document.execCommand("copy");cb();}catch(e){toast("Couldn’t copy automatically.");}
+  document.body.removeChild(ta);
+}
+
+let toastT;
+function toast(msg){
+  const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600);
+}
+
+/* ---- live sync from the published Google Sheet ---- */
+function nowTime(){ try{ return new Date().toLocaleString(); }catch(e){ return ""; } }
+function setStatus(msg){ const el=$("liveStatus"); if(el) el.textContent=msg; }
+async function loadFromSheet(silent){
+  if(!SHEET_CSV_URL){ if(!silent) toast("No Google Sheet link saved yet - see the note near the top of the file."); return false; }
+  try{
+    setStatus("Syncing with the Google Sheet...");
+    const url = SHEET_CSV_URL + (SHEET_CSV_URL.indexOf("?")>=0?"&":"?") + "cb=" + Date.now();
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const text = await res.text();
+    const wb = XLSX.read(text, {type:"string"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:"", raw:false, blankrows:false});
+    if(!aoa.length) throw new Error("empty");
+    const hdr = aoa[0].map(h=>String(h==null?"":h).trim());
+    const rows = aoa.slice(1)
+      .filter(r=>r.some(c=>String(c==null?"":c).trim()!==""))
+      .map(r=>{ const o={}; hdr.forEach((h,i)=>o[h]=String(r[i]==null?"":r[i]).trim()); return o; });
+    if(!detectFields(hdr).majors) throw new Error("nomajor");
+    HEADERS=hdr; ROWS=rows; selectedMajor=null; searchTerm=""; $("searchBox").value="";
+    if($("dataSrc")) $("dataSrc").style.display="none";
+    rebuild();
+    setStatus("Live from Google Sheet - "+rows.length+" applicants (synced "+nowTime()+")");
+    if(!silent) toast("Synced "+rows.length+" applicants from your Google Sheet.");
+    return true;
+  }catch(err){
+    console.error(err);
+    setStatus("Could not reach the Google Sheet - showing the saved copy instead.");
+    if(!silent) toast("Could not load from the Sheet. Check it is published to the web as CSV and the link is correct.");
+    return false;
+  }
+}
+$("syncBtn").onclick = ()=>loadFromSheet(false);
+
+/* ---- load latest export ---- */
+$("loadBtn").onclick = ()=> $("fileInput").click();
+$("fileInput").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const wb = XLSX.read(new Uint8Array(ev.target.result), {type:"array"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:"", raw:false, blankrows:false});
+      if(!aoa.length) throw new Error("empty");
+      const hdr = aoa[0].map(h => String(h==null?"":h).trim());
+      const newRows = aoa.slice(1)
+        .filter(r => r.some(c => String(c==null?"":c).trim() !== ""))
+        .map(r => { const o={}; hdr.forEach((h,i)=>o[h]=String(r[i]==null?"":r[i]).trim()); return o; });
+      const probe = detectFields(hdr);
+      if(!probe.majors) throw new Error("nomajor");
+      HEADERS = hdr; ROWS = newRows;
+      selectedMajor = null; searchTerm = ""; $("searchBox").value = "";
+      $("dataSrc").innerHTML = "Loaded from <b>"+esc(f.name)+"</b>";
+      rebuild();
+      toast("Loaded "+newRows.length+" applicants from "+f.name);
+    }catch(err){
+      console.error(err);
+      toast("Couldn’t read that file. Use the .xlsx or .csv exported from your form.");
+    }
+    $("fileInput").value = "";
+  };
+  reader.readAsArrayBuffer(f);
+};
+
+/* ---- save a fresh, self-contained copy with current data baked in ---- */
+function fmtToday(){const d=new Date();const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return String(d.getDate()).padStart(2,"0")+" "+m[d.getMonth()]+" "+d.getFullYear();}
+function selfSave(){
+  const savedSel=selectedMajor, savedSearch=searchTerm;
+  selectedMajor=null; searchTerm=""; $("searchBox").value=""; $("toast").textContent=""; $("toast").classList.remove("show");
+  renderPills(); renderAll();
+  try{
+    const BS=String.fromCharCode(92);
+    const obj={headers:HEADERS,rows:ROWS,generated:fmtToday(),n:ROWS.length};
+    const dataJson=JSON.stringify(obj).split("</").join("<"+BS+"/");
+    let html="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
+    const A="/*DATA_START*/", B="/*DATA_END*/";
+    const i=html.indexOf(A), j=html.indexOf(B);
+    if(i<0||j<0) throw new Error("sentinels missing");
+    html=html.slice(0,i)+A+"const DATA = "+dataJson+";"+B+html.slice(j+B.length);
+    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="faculty_applications_by_major.html";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    toast("Saved a fresh copy with "+ROWS.length+" applicants — open that file from now on.");
+  }catch(err){ console.error(err); toast("Couldn\u2019t save in this browser — try Chrome or Edge, or use the browser\u2019s File \u25B8 Save Page As."); }
+  selectedMajor=savedSel; searchTerm=savedSearch; $("searchBox").value=savedSearch;
+  renderPills(); renderAll();
+}
+$("saveBtn").onclick = selfSave;
+
+/* ---- search + sort + print ---- */
+$("searchBox").addEventListener("input", e => { searchTerm = e.target.value.trim(); renderResults(); });
+$("sortSel").addEventListener("change", e => { sortKey = e.target.value; renderResults(); });
+window.addEventListener("beforeprint", ()=>{
+  const label = selectedMajor===null ? "All majors" : (selectedMajor==="__ALL__"?"All applicants":selectedMajor);
+  const n = recordsForMajor().length;
+  $("printTitle").textContent = "Faculty Applications — "+label;
+  $("printSub").textContent = n+" applicant"+(n===1?"":"s")+" · generated "+DATA.generated;
+});
+
+/* ---- go ---- */
+$("genDate").textContent = DATA.generated;
+rebuild();
+if (SHEET_CSV_URL) { setStatus("Syncing with the Google Sheet..."); loadFromSheet(true); }
+else { setStatus(""); }
+</script>
+</body>
+</html>
